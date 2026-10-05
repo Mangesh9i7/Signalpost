@@ -1,0 +1,4 @@
+.venv/
+entry-companies.jsonl
+smoke-companies.jsonl
+signalpost-universe.jsonl.gz
