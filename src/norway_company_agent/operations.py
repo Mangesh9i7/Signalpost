@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import resource
 import sys
 from collections import Counter
 from typing import Iterable
@@ -38,6 +37,38 @@ def domain_request_summary(counts: Counter[str]) -> dict[str, float | int | None
 
 
 def peak_rss_bytes() -> int:
-    value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    # macOS reports bytes; Linux and most BSD-derived CI images report KiB.
-    return int(value if sys.platform == "darwin" else value * 1024)
+    """Return peak resident set size in bytes, cross-platform."""
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            import ctypes.wintypes
+            kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+
+            class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+                _fields_ = [
+                    ("cb", ctypes.wintypes.DWORD),
+                    ("PageFaultCount", ctypes.wintypes.DWORD),
+                    ("PeakWorkingSetSize", ctypes.c_size_t),
+                    ("WorkingSetSize", ctypes.c_size_t),
+                    ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                    ("PagefileUsage", ctypes.c_size_t),
+                    ("PeakPagefileUsage", ctypes.c_size_t),
+                ]
+
+            counters = PROCESS_MEMORY_COUNTERS()
+            counters.cb = ctypes.sizeof(PROCESS_MEMORY_COUNTERS)
+            psapi = ctypes.windll.psapi  # type: ignore[attr-defined]
+            handle = kernel32.GetCurrentProcess()
+            if psapi.GetProcessMemoryInfo(handle, ctypes.byref(counters), counters.cb):
+                return int(counters.PeakWorkingSetSize)
+        except Exception:
+            pass
+        return 0
+    else:
+        import resource as _resource
+        value = _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss
+        # macOS reports bytes; Linux and most BSD-derived CI images report KiB.
+        return int(value if sys.platform == "darwin" else value * 1024)

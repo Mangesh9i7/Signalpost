@@ -2,3 +2,8 @@
 entry-companies.jsonl
 smoke-companies.jsonl
 signalpost-universe.jsonl.gz
+brreg-enheter.csv
+.env
+.env.*
+out/
+.cache/

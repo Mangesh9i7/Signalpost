@@ -75,6 +75,14 @@ def normalize_financials(body: Any) -> dict[str, Any]:
     records = body if isinstance(body, list) else []
     if not records:
         return {"records": []}
+    
+    # Sort descending by period end date so index 0 is always the newest year
+    records = sorted(
+        records,
+        key=lambda item: str(_get(item, "regnskapsperiode", "tilDato") or ""),
+        reverse=True
+    )
+    
     normalized = []
     for item in records[:3]:
         normalized.append({
@@ -91,7 +99,6 @@ def normalize_financials(body: Any) -> dict[str, Any]:
             "debt": _get(item, "egenkapitalGjeld", "gjeldOversikt", "sumGjeld"),
         })
     return {"records": normalized}
-
 
 def normalize_financial_history(body: Any, org: str) -> dict[str, Any]:
     years = sorted({str(year) for year in body if str(year).isdigit()}) if isinstance(body, list) else []

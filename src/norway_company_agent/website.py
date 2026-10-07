@@ -78,7 +78,7 @@ def normalize_homepage(value: str | None) -> str | None:
 def _registered_domain(url: str) -> str:
     parsed = urllib.parse.urlparse(url)
     ext = tldextract.extract(parsed.hostname or "")
-    return ext.top_domain_under_public_suffix
+    return ext.registered_domain or f"{ext.domain}.{ext.suffix}".strip(".")
 
 
 def _robots_allowed(url: str, timeout: float) -> bool:

@@ -142,7 +142,23 @@ def deterministic_financial_filer_sample(
 
 
 def iter_bulk(path: str | Path) -> Iterable[dict[str, Any]]:
-    with gzip.open(path, "rt", encoding="utf-8-sig", newline="") as handle:
+    file_path = Path(path)
+    is_gzip = file_path.suffix == ".gz" or file_path.name.endswith(".csv.gz")
+    if not is_gzip:
+        # Try to detect gzip by magic bytes
+        try:
+            with open(file_path, "rb") as f:
+                magic = f.read(2)
+                is_gzip = magic == b"\x1f\x8b"
+        except OSError:
+            is_gzip = False
+
+    if is_gzip:
+        handle = gzip.open(file_path, "rt", encoding="utf-8-sig", newline="")
+    else:
+        handle = open(file_path, "r", encoding="utf-8-sig", newline="")
+
+    with handle:
         sample = handle.read(8192)
         handle.seek(0)
         dialect = csv.Sniffer().sniff(sample, delimiters=";,\t")
